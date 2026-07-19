@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoCalc | My Carbon Footprint</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- GLASSMORPHISM & DYNAMIC Variables --- */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0575E6 0%, #00F260 100%);
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            --glass-hover: rgba(255, 255, 255, 0.25);
+            --glass-input: rgba(0, 0, 0, 0.15);
+            --text-main: #ffffff; 
+            --text-muted: rgba(255, 255, 255, 0.85); 
+            --accent: #a6ffcb; 
+            --foot-base: rgba(255, 255, 255, 0.9); 
+            --foot-toes: rgba(255, 255, 255, 0.8); 
+            --foot-face: #0575E6;
+            --blush: #ff8a80; 
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
+
+        body { 
+            font-family: 'Nunito', sans-serif; margin: 0; padding: 0; min-height: 100vh; 
+            background: var(--bg-gradient); color: var(--text-main); overflow-x: hidden;
+            background-size: 200% 200%;
+            transition: background 1.5s ease;
+            animation: gradientMove 10s ease infinite;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- TIER ANNOUNCEMENT STYLES --- */
+        .tier-announcement {
+            text-align: center; margin-bottom: 25px; padding: 20px 10px; background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border); border-radius: 20px; box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px); font-size: 1.2rem; font-weight: 800; color: var(--text-muted);
+        }
+        .tier-title-highlight {
+            display: block; font-size: 2.8rem; font-weight: 900; text-transform: uppercase;
+            letter-spacing: 2px; margin-top: 5px; line-height: 1.1;
+        }
+        .color-saint { color: #38ef7d; text-shadow: 0 0 15px rgba(56, 239, 125, 0.5); }
+        .color-mid { color: #F2C94C; text-shadow: 0 0 15px rgba(242, 201, 76, 0.5); }
+        .color-heavy { color: #ff4b2b; text-shadow: 0 0 15px rgba(255, 75, 43, 0.5); }
+
+        /* --- DYNAMIC THEME BACKGROUNDS --- */
+        body.theme-saint { --bg-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        body.theme-mid { --bg-gradient: linear-gradient(135deg, #F2994A 0%, #F2C94C 100%); }
+        body.theme-destroyer { --bg-gradient: linear-gradient(135deg, #4b134f 0%, #1a0000 100%); }
+
+        /* --- SCENERY LAYERS --- */
+        #scenery-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -3; pointer-events: none; overflow: hidden; }
+        .sun-ray { position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0.05) 0deg, transparent 30deg, rgba(255,255,255,0.05) 60deg, transparent 90deg, rgba(255,255,255,0.05) 120deg, transparent 150deg, rgba(255,255,255,0.05) 180deg, transparent 210deg, rgba(255,255,255,0.05) 240deg, transparent 270deg, rgba(255,255,255,0.05) 300deg, transparent 330deg, rgba(255,255,255,0.05) 360deg); animation: rotateRays 90s linear infinite; mix-blend-mode: overlay; }
+        .rolling-hill { position: absolute; bottom: -15vh; border-radius: 50%; filter: blur(12px); }
+        .hill-1 { width: 120vw; height: 35vh; left: -10vw; background: linear-gradient(to top, rgba(17, 153, 142, 0.6), transparent); }
+        .hill-2 { width: 100vw; height: 45vh; right: -20vw; background: linear-gradient(to top, rgba(56, 239, 125, 0.4), transparent); }
+        .drifting-cloud { position: absolute; background: rgba(255,255,255,0.15); border-radius: 100px; filter: blur(15px); animation: driftCloud linear infinite; }
+        .toxic-glow { position: absolute; bottom: 0; width: 100vw; height: 25vh; background: linear-gradient(to top, rgba(255, 69, 0, 0.3), transparent); mix-blend-mode: color-dodge; }
+        .smog-cloud { position: absolute; filter: blur(40px); border-radius: 50%; background: rgba(10, 10, 10, 0.5); mix-blend-mode: multiply; animation: driftSmogHover infinite alternate ease-in-out; }
+
+        /* --- PARTICLES --- */
+        #particle-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2; pointer-events: none; overflow: hidden; }
+        .bubble { position: absolute; border-radius: 50%; box-shadow: 0 4px 15px rgba(255,255,255,0.1); background: var(--glass-bg); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid var(--glass-border); animation: floatUp infinite ease-in-out; opacity: 0; }
+        .particle-leaf { position: absolute; background: rgba(46, 204, 113, 0.6); border-radius: 0 50% 50% 50%; transform: rotate(45deg); box-shadow: inset 2px -2px 5px rgba(0,0,0,0.1); animation: fall infinite linear; opacity: 0; }
+        .particle-ember { position: absolute; background: rgba(255, 69, 0, 0.8); border-radius: 50%; box-shadow: 0 0 15px rgba(255, 69, 0, 0.9), 0 0 30px rgba(255, 0, 0, 0.6); animation: floatUp infinite ease-in; opacity: 0; }
+        .firefly { position: absolute; width: 5px; height: 5px; background: #fffacd; border-radius: 50%; box-shadow: 0 0 12px 3px rgba(255, 235, 59, 0.8); animation: fireflyFloat infinite alternate ease-in-out; }
+
+        @keyframes floatUp { 0% { transform: translateY(10vh) scale(0.5); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-110vh) scale(1.2); opacity: 0; } }
+        @keyframes fall { 0% { transform: translateY(-10vh) rotate(0deg) translateX(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(110vh) rotate(360deg) translateX(50px); opacity: 0; } }
+        @keyframes rotateRays { 100% { transform: rotate(360deg); } }
+        @keyframes driftCloud { 0% { transform: translateX(-200px); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateX(110vw); opacity: 0; } }
+        @keyframes driftSmogHover { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(60px, -40px) scale(1.1); } }
+        @keyframes fireflyFloat { 0% { transform: translate(0, 0) scale(1); opacity: 0.4; } 100% { transform: translate(40px, -60px) scale(1.5); opacity: 1; } }
+
+        /* --- UI STYLES --- */
+        .global-header { position: fixed; top: 0; left: 0; width: 100%; padding: 25px 50px; display: flex; justify-content: space-between; align-items: center; z-index: 100; box-sizing: border-box; }
+        .logo-container { display: flex; align-items: center; gap: 12px; }
+        .logo-icon { font-size: 1.8rem; color: var(--accent); text-shadow: 0 2px 10px rgba(0,0,0,0.2); transition: color 1.5s ease; }
+        .logo-text { font-weight: 900; font-size: 1.6rem; letter-spacing: -0.5px; color: var(--text-main); text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        
+        /* AUDIO CONTROLS */
+        .audio-controls {
+            display: flex; align-items: center; gap: 15px; background: var(--glass-bg); padding: 5px; 
+            border-radius: 30px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .audio-toggle-btn { width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-main); font-size: 1.2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.3s ease; }
+        .audio-toggle-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+
+        .login-wrapper { display: flex; width: 100vw; height: 100vh; transition: opacity 0.8s ease, transform 0.8s ease; }
+        .left-half { flex: 1.2; display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none;}
+        .right-half { flex: 0.8; display: flex; justify-content: flex-start; align-items: center; z-index: 10; padding-left: 40px; }
+        .foot-mascot { width: 400px; height: 500px; pointer-events: auto; animation: gentleFloat 4s ease-in-out infinite; }
+        @keyframes gentleFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-15px) rotate(2deg); } }
+        
+        .foot-body { filter: drop-shadow(0 15px 25px rgba(0,0,0,0.2)); transition: transform 0.2s ease; }
+        .eye-open { transition: opacity 0.2s ease; }
+        .eye-closed { opacity: 0; transition: opacity 0.2s ease; }
+        .pupil { transition: transform 0.05s linear; }
+        .foot-mascot.eyes-closed .eye-open { opacity: 0; }
+        .foot-mascot.eyes-closed .eye-closed { opacity: 1; }
+        .foot-mascot.eyes-closed .foot-body { transform: scale(0.98); }
+
+        .login-box { width: 380px; background: var(--glass-bg); border-radius: 35px; box-shadow: var(--glass-shadow); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); padding: 45px 35px; position: relative; animation: slideInRight 1s ease forwards; opacity: 0; transform: translateX(50px); }
+        @keyframes slideInRight { to { opacity: 1; transform: translateX(0); } }
+
+        .login-box h2 { font-size: 2.2rem; margin: 0 0 5px 0; font-weight: 900; color: var(--text-main); text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .login-box p { color: var(--text-muted); font-size: 1rem; margin-bottom: 35px; font-weight: 800; }
+
+        .cute-input { position: relative; margin-bottom: 25px; width: 100%; }
+        .cute-input input { width: 100%; padding: 18px 20px 10px 20px; background: var(--glass-input); border: 1px solid var(--glass-border); border-radius: 20px; color: var(--text-main); font-size: 1rem; font-family: 'Nunito', sans-serif; font-weight: 800; outline: none; box-sizing: border-box; transition: all 0.3s ease; }
+        .cute-input label { position: absolute; top: 16px; left: 20px; color: var(--text-muted); font-size: 1rem; transition: 0.2s ease all; pointer-events: none; font-weight: 800; }
+        .cute-input input:focus { background: rgba(0,0,0,0.25); border-color: var(--accent); box-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+        .cute-input input:focus ~ label, .cute-input input:not(:placeholder-shown) ~ label { top: 6px; left: 20px; font-size: 0.65rem; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+
+        button { width: 100%; padding: 18px; background: rgba(255,255,255,0.2); color: var(--text-main); border: 1px solid var(--glass-border); border-radius: 20px; font-size: 1.1rem; font-weight: 900; font-family: 'Nunito', sans-serif; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.1); backdrop-filter: blur(5px); }
+        button:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+        button:disabled { cursor: not-allowed; opacity: 0.7; }
+
+        .auth-toggle { text-align: center; margin-top: 15px; }
+        .auth-toggle span { color: var(--text-muted); font-size: 0.9rem; font-weight: 800; }
+        .auth-toggle a { color: var(--accent); font-weight: 900; text-decoration: none; transition: 0.2s; }
+        .auth-toggle a:hover { text-decoration: underline; text-shadow: 0 0 5px rgba(255, 255, 255, 0.5); }
+
+        .dashboard-wrapper { display: none; width: 100vw; min-height: 100vh; justify-content: center; align-items: center; padding: 100px 40px 40px 40px; box-sizing: border-box; }
+        .dashboard-glass { width: 100%; max-width: 780px; background: var(--glass-bg); border-radius: 35px; box-shadow: var(--glass-shadow); padding: 40px 50px; position: relative; overflow: hidden; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); }
+
+        .progress-container { position: absolute; top: 0; left: 0; width: 100%; height: 8px; background: rgba(0,0,0,0.1); }
+        .progress-bar { height: 100%; width: 14.28%; background: var(--accent); border-radius: 10px; transition: width 0.5s ease, background 1.5s ease; box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+
+        .step { display: none; }
+        .step.active { display: block; animation: fadeInUp 0.5s ease forwards; }
+        @keyframes fadeInUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+
+        .dashboard-glass h2 { font-size: 2.2rem; margin: 0 0 20px 0; font-weight: 900; color: var(--text-main); border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .step-header h3 { font-size: 1.6rem; margin: 0 0 5px 0; font-weight: 900; color: var(--text-main); text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .step-header p { color: var(--text-muted); font-size: 1rem; margin: 0 0 25px 0; font-weight: 800; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .btn-row { display: flex; justify-content: space-between; margin-top: 30px; gap: 20px; }
+
+        .dash-input { margin-bottom: 15px; }
+        .dash-input label { display: block; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+        .dash-input input, .dash-input select { width: 100%; padding: 14px 18px; background: var(--glass-input); border: 1px solid var(--glass-border); border-radius: 16px; color: var(--text-main); font-size: 1rem; font-weight: 800; font-family: 'Nunito'; outline:none; box-sizing:border-box; transition: all 0.3s; }
+        .dash-input input:focus, .dash-input select:focus { background: rgba(0,0,0,0.25); border-color: var(--accent); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        .dash-input select option { background: #0083b0; color: #fff; }
+
+        .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); padding: 20px; border-radius: 20px; text-align: center; backdrop-filter: blur(5px); }
+        .stat-card h4 { margin: 0; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
+        .stat-number { font-size: 2.5rem; font-weight: 900; color: var(--text-main); margin: 5px 0 0 0; line-height: 1.1; letter-spacing: -1px; text-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        .chart-container { background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 24px; padding: 20px; height: 220px; width: 100%; backdrop-filter: blur(5px); }
+
+        .action-card { background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 20px; transition: transform 0.2s ease; cursor: default; backdrop-filter: blur(5px); }
+        .action-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.25); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .action-card h4 { margin: 0 0 5px 0; font-size: 1.1rem; color: var(--text-main); font-weight: 900; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .action-card p { margin: 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; font-weight: 800; }
+
+        .lb-container { max-height: 350px; overflow-y: auto; padding-right: 10px; margin-bottom: 30px; }
+        .lb-row { display: flex; align-items: center; padding: 18px 20px; background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 16px; margin-bottom: 15px; font-weight: 800; transition: transform 0.2s, background 0.2s; backdrop-filter: blur(5px); }
+        .lb-row:hover { transform: scale(1.02); background: rgba(255,255,255,0.25); }
+        .lb-row.current-user { background: rgba(255,255,255,0.3); border: 2px solid var(--accent); box-shadow: 0 0 15px rgba(255, 255, 255, 0.4); }
+        .lb-rank { font-size: 1.6rem; color: var(--text-main); font-weight: 900; width: 50px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .lb-name { flex-grow: 1; font-size: 1.1rem; color: var(--text-main); }
+        .lb-score { color: var(--text-main); font-size: 1.2rem; font-weight: 900; text-align: right; text-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1.2; }
+
+        /* --- Sapling Interactive Elements --- */
+        .sapling-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 350px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 25px; margin-bottom: 25px; position: relative; overflow: hidden; backdrop-filter: blur(5px); }
+        .sapling-svg { width: 100%; max-width: 250px; overflow: visible; z-index: 2; }
+        .sapling-ground { position: absolute; bottom: 0; width: 100%; height: 30px; background: rgba(0,0,0,0.2); border-radius: 0 0 25px 25px; z-index: 1; }
+        .impact-text { text-align: center; font-size: 1.2rem; font-weight: 800; color: var(--text-main); padding: 0 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); margin-top: -10px; z-index: 3;}
+        .impact-highlight { color: var(--text-main); font-size: 1.5rem; font-weight: 900; text-transform: uppercase;}
+
+        /* --- Slider Styling --- */
+        .slider-box { background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.3); padding: 25px; border-radius: 20px; margin-bottom: 25px; text-align: center; backdrop-filter: blur(5px); }
+        .slider-box h4 { margin: 0 0 5px 0; font-size: 1.2rem; color: var(--text-main); font-weight: 900; }
+        .custom-slider { -webkit-appearance: none; width: 100%; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.3); outline: none; margin: 20px 0; }
+        .custom-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,0.3); transition: transform 0.1s; }
+        .custom-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        
+        .social-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(15px); flex-direction: column; gap: 20px; opacity: 0; transition: opacity 0.4s ease; }
+        .social-card-wrapper { width: 360px; height: 640px; border-radius: 35px; position: relative; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5); background-color: #0575E6; background-image: linear-gradient(135deg, #0575E6 0%, #00F260 100%); color: #ffffff; display: flex; flex-direction: column; justify-content: space-between; padding: 40px 30px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.3); transition: background 0.5s ease; }
+        .social-header { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.2rem; }
+        .social-header i { color: #ffffff; }
+        .social-content { text-align: center; margin-bottom: 10px;}
+        .social-content-title { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; color: #ffffff; margin-bottom: 25px; background: rgba(0,0,0,0.2); padding: 8px 15px; border-radius: 20px; display: inline-block; text-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); }
+        .social-content h3 { font-size: 1.8rem; font-weight: 900; margin: 0 0 10px 0; line-height: 1.2; color: #fff; }
+        .social-score { font-size: 4rem; font-weight: 900; letter-spacing: -2px; margin: 0; line-height: 1; color: #ffffff; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .social-unit { font-size: 1rem; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.9); font-weight: 800; margin-top: 10px; }
+        .social-glass-box { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 20px; text-align: left; backdrop-filter: blur(10px); }
+        .social-glass-box p { margin: 0; font-size: 0.95rem; line-height: 1.5; font-weight: 800; color: #fff; }
+        .social-glass-box span { font-weight: 900; font-size: 1.2rem; }
+        .social-footer { text-align: center; font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #fff; }
+        .modal-controls { display: flex; gap: 15px; width: 360px; }
+        .modal-controls button { padding: 15px; border-radius: 16px; font-size: 1rem; }
+
+        @media (max-width: 900px) {
+            .login-wrapper { flex-direction: column; } .left-half, .right-half { width: 100%; height: 50vh; padding: 0; }
+            .foot-mascot { width: 200px; height: 300px; } .login-box { width: 90%; padding: 30px; }
+            .grid-2, .grid-3, .results-grid { grid-template-columns: 1fr; }
+            .global-header { padding: 20px; }
+            .social-card-wrapper { transform: scale(0.9); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="scenery-container"></div>
+    <div id="particle-container"></div>
+    
+    <header class="global-header">
+        <div class="logo-container">
+            <i class="fas fa-paw logo-icon"></i>
+            <span class="logo-text">EcoFootprint</span>
+        </div>
+        <div class="audio-controls">
+            <button class="audio-toggle-btn" id="audioToggle" onclick="toggleAudio()" title="Mute/Unmute">
+                <i class="fas fa-volume-up" id="audioIcon"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="login-wrapper" id="loginScreen">
+        <div class="left-half">
+            <svg class="foot-mascot" id="foot-mascot" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+                <g class="foot-body">
+                    <circle cx="55" cy="80" r="18" fill="var(--foot-toes)"/>
+                    <circle cx="95" cy="65" r="14" fill="var(--foot-toes)"/>
+                    <circle cx="125" cy="70" r="12" fill="var(--foot-toes)"/>
+                    <circle cx="150" cy="85" r="10" fill="var(--foot-toes)"/>
+                    <circle cx="170" cy="110" r="8" fill="var(--foot-toes)"/>
+                    <path d="M 60 120 C 25 150, 40 260, 100 260 C 160 260, 180 160, 140 120 C 130 90, 75 90, 60 120 Z" fill="var(--foot-base)"/>
+                </g>
+                <g id="foot-face">
+                    <g class="eye-open">
+                        <circle cx="85" cy="170" r="9" fill="#000000"/>
+                        <circle cx="82" cy="167" r="3" class="pupil" id="pupil-left" fill="#fff"/>
+                        <circle cx="125" cy="170" r="9" fill="#000000"/>
+                        <circle cx="122" cy="167" r="3" class="pupil" id="pupil-right" fill="#fff"/>
+                    </g>
+                    <g class="eye-closed">
+                        <path d="M 75 170 Q 85 160 95 170" fill="none" stroke="#000000" stroke-width="4" stroke-linecap="round"/>
+                        <path d="M 115 170 Q 125 160 135 170" fill="none" stroke="#000000" stroke-width="4" stroke-linecap="round"/>
+                    </g>
+                    <circle cx="65" cy="185" r="10" fill="var(--blush)" opacity="0.9"/>
+                    <circle cx="145" cy="185" r="10" fill="var(--blush)" opacity="0.9"/>
+                    <path d="M 95 190 Q 105 200 115 190" fill="none" stroke="#000000" stroke-width="4" stroke-linecap="round"/>
+                </g>
+            </svg>
+        </div>
+        <div class="right-half">
+            <div class="login-box">
+                <h2 id="authTitle">Hello there! 🐾</h2>
+                <p id="authSubtitle">Let's check on your little footprint.</p>
+                <div class="cute-input"><input type="text" id="username" placeholder=" " autocomplete="off"><label>Nickname</label></div>
+                <div class="cute-input"><input type="password" id="password" placeholder=" "><label>Secret Code</label></div>
+                <div id="loginError" style="color: #ff8a80; font-size: 0.85rem; margin-bottom: 15px; display: none; font-weight:900;"></div>
+                
+                <button id="loginBtn" onclick="handleLoginWrapper()">Hop In</button>
+                
+                <div class="auth-toggle">
+                    <span id="authToggleText">New here? </span>
+                    <a href="#" id="toggleAuthBtn" onclick="toggleSignup()">Create Account</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-wrapper" id="dashboardScreen">
+        <div class="dashboard-glass">
+            <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+            <h2 id="greetingText">My Carbon Footprint</h2>
+
+            <div class="step active" id="step-1">
+                <div class="step-header">
+                    <h3>Habitat & Diet</h3>
+                    <p>Let's start with your home and food habits.</p>
+                </div>
+                <div class="grid-3">
+                    <div class="dash-input">
+                        <label>Occupants</label>
+                        <select id="people">
+                            <option value="1">Just Me (1)</option><option value="2">2</option><option value="3">3</option>
+                            <option value="4">4</option><option value="5">5</option><option value="6">6+</option>
+                        </select>
+                    </div>
+                    <div class="dash-input">
+                        <label>Diet Type</label>
+                        <select id="diet_type"><option value="veg">Vegetarian</option><option value="nonveg">Non-Vegetarian</option></select>
+                    </div>
+                    <div class="dash-input"><label>Meals per Day</label><input type="number" id="meals_per_day" value="3" min="1"></div>
+                </div>
+                <div class="btn-row">
+                    <div></div><button style="width: 200px;" onclick="changeStep(1)">Next <i class="fas fa-arrow-right" style="margin-left:8px;"></i></button>
+                </div>
+            </div>
+
+            <div class="step" id="step-2">
+                <div class="step-header">
+                    <h3>Energy & Digital Life</h3>
+                    <p>Powering your home and your screens.</p>
+                </div>
+                <div class="grid-2">
+                    <div class="dash-input"><label>Electricity (kWh/month)</label><input type="number" id="electricity_kwh" value="0" min="0"></div>
+                    <div class="dash-input"><label>LPG Cylinders (kg/month)</label><input type="number" id="lpg_kg" value="0" min="0"></div>
+                    <div class="dash-input"><label>Screen Time (Hours/day)</label><input type="number" id="screen_hours" value="0" min="0"></div>
+                    <div class="dash-input"><label>Mobile Data (GB/month)</label><input type="number" id="data_gb" value="0" min="0"></div>
+                </div>
+                <div class="btn-row">
+                    <button style="width: 150px; background: transparent; color: var(--text-main); border: 1px solid var(--text-muted);" onclick="changeStep(-1)"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button style="width: 200px;" onclick="changeStep(1)">Next <i class="fas fa-arrow-right" style="margin-left:8px;"></i></button>
+                </div>
+            </div>
+
+            <div class="step" id="step-3">
+                <div class="step-header">
+                    <h3>Travel Habits</h3>
+                    <p>Kilometers traveled per month by transport type.</p>
+                </div>
+                <div class="grid-3">
+                    <div class="dash-input"><label>Car (km)</label><input type="number" id="car_km" value="0" min="0"></div>
+                    <div class="dash-input"><label>Bike/Scooter (km)</label><input type="number" id="bike_km" value="0" min="0"></div>
+                    <div class="dash-input"><label>Cycle (km)</label><input type="number" id="cycle_km" value="0" min="0"></div>
+                    <div class="dash-input"><label>Metro (km)</label><input type="number" id="metro_km" value="0" min="0"></div>
+                    <div class="dash-input"><label>Bus (km)</label><input type="number" id="bus_km" value="0" min="0"></div>
+                    <div class="dash-input"><label>Flights (km)</label><input type="number" id="flight_km" value="0" min="0"></div>
+                </div>
+                <div class="btn-row">
+                    <button style="width: 150px; background: transparent; color: var(--text-main); border: 1px solid var(--text-muted);" onclick="changeStep(-1)"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button id="calcBtn" style="width: 250px; background: var(--glass-hover); border-color: var(--accent);" onclick="calculateFinal()"><i class="fas fa-paw" style="margin-right:8px;"></i> Reveal Footprint</button>
+                </div>
+            </div>
+
+            <div class="step" id="step-4">
+                <div class="step-header">
+                    <h3>Your Results</h3>
+                    <p>Based on your daily lifestyle inputs.</p>
+                </div>
+
+                <div class="tier-announcement">
+                    You are an 
+                    <span id="tier-title-display" class="tier-title-highlight">Evaluating...</span>
+                </div>
+                
+                <div class="results-grid">
+                    <div class="stat-card" style="border: 2px solid var(--accent); background: rgba(255,255,255,0.25);">
+                        <h4 style="color: var(--text-main);">Monthly Footprint</h4>
+                        <div class="stat-number" id="res_total" style="color: var(--accent);">0</div>
+                        <span style="color:var(--text-main); font-size:0.85rem; font-weight:900;">Kg CO₂e</span>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Eco Score</h4>
+                        <div class="stat-number" id="res_score" style="font-size: 2.5rem;">0</div>
+                        <span style="color:var(--text-muted); font-size:0.8rem; font-weight:900;">Out of 100</span>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Trees To Offset</h4>
+                        <div class="stat-number" id="res_trees" style="font-size: 2.2rem; padding-top: 5px;">0</div>
+                        <span style="color:var(--text-muted); font-size:0.8rem; font-weight:900;">Trees per Year</span>
+                    </div>
+                    <div class="stat-card">
+                        <h4>History Check</h4>
+                        <div class="stat-number" id="res_improvement" style="font-size: 1.6rem; padding-top: 15px;">New</div>
+                        <span id="res_comp_val" style="color:var(--text-muted); font-size:0.8rem; font-weight:900;">First Entry</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.15); border-radius: 12px; font-size: 0.95rem; text-align: center; line-height: 1.6; border: 1px solid var(--glass-border);">
+                    🚗 Equivalent to <span id="car_equiv" style="font-weight: 900; color: var(--accent);">0</span> cars running for a year.<br>
+                    🌍 Your Carbon Twin: Average person in <span id="twin_country" style="font-weight:900; color: var(--accent);">Thailand 🇹🇭</span>
+                </div>
+
+                <div class="chart-container" style="margin-bottom:25px;"><canvas id="benchmarkChart"></canvas></div>
+
+                <div class="btn-row" id="final-buttons">
+                    <button style="width: 250px; background: rgba(255,255,255,0.3); color: white; border: 1px solid var(--glass-border);" onclick="openSocialModal()"><i class="fab fa-instagram" style="margin-right:8px; font-size: 1.2rem;"></i> Share Result</button>
+                    <button style="width: 250px; background: rgba(255,255,255,0.3);" onclick="changeStep(1)">View Impact <i class="fas fa-tree" style="margin-left:8px;"></i></button>
+                </div>
+            </div>
+
+            <div class="step" id="step-5">
+                <div class="step-header">
+                    <h3>Your Real-World Impact</h3>
+                    <p>See how your footprint affects nature.</p>
+                </div>
+
+                <div class="sapling-container">
+                    <div class="sapling-ground"></div>
+                    <svg class="sapling-svg" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M 60 220 L 140 220 L 150 250 L 50 250 Z" fill="rgba(255,255,255,0.3)"/>
+                        <rect x="45" y="210" width="110" height="10" rx="2" fill="rgba(255,255,255,0.5)"/>
+                        
+                        <g id="sapling-group" style="transform-origin: 100px 220px; transform: scale(0);">
+                            <path d="M 100 210 Q 90 150 100 80" fill="none" stroke="#2ecc71" stroke-width="8" stroke-linecap="round"/>
+                            <path d="M 100 80 Q 60 80 50 40 Q 90 20 100 80" fill="#27ae60"/>
+                            <path d="M 100 90 Q 140 90 150 50 Q 110 30 100 90" fill="#27ae60"/>
+                            <path d="M 100 130 Q 70 130 60 100 Q 90 80 100 130" fill="#27ae60"/>
+                            <circle cx="100" cy="30" r="25" fill="#2ecc71"/>
+                        </g>
+                    </svg>
+                    <p class="impact-text" id="sapling-message">Loading impact...</p>
+                </div>
+
+                <div class="btn-row" style="justify-content: space-between;">
+                    <button style="width: 150px; background: transparent; color: var(--text-main); border: 1px solid var(--text-muted);" onclick="changeStep(-1)"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button style="width: 250px; background: rgba(255,255,255,0.3);" onclick="changeStep(1)">Eco Coach <i class="fas fa-arrow-right" style="margin-left:8px;"></i></button>
+                </div>
+            </div>
+
+            <div class="step" id="step-6">
+                <div class="step-header">
+                    <h3>Eco Coach Suggestions</h3>
+                    <p>Targeting your highest emission category: <span id="highest-cat-label" style="color: var(--text-main); font-weight: 900; text-transform: uppercase; text-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span></p>
+                </div>
+
+                <div class="slider-box">
+                    <h4>Commit to Change Slider</h4>
+                    <p style="margin: 0 0 15px 0; font-size: 0.9rem;">Slide to adopt up to 3 simple habits and see your new projected footprint!</p>
+                    
+                    <input type="range" id="habitSlider" class="custom-slider" min="0" max="3" step="1" value="0" oninput="updateSliderProjection()">
+                    <div style="display:flex; justify-content: space-between; font-weight: 900; font-size: 0.85rem; margin-top: -10px;">
+                        <span>0 Habits</span>
+                        <span>3 Habits</span>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 12px;" id="sliderResultText">
+                        Current Footprint: <strong style="font-size: 1.2rem;">0 Kg CO₂e</strong>
+                    </div>
+                </div>
+
+                <div id="dynamic-suggestions" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
+                </div>
+
+                <div class="btn-row" style="justify-content: space-between;">
+                    <button style="width: 150px; background: transparent; color: var(--text-main); border: 1px solid var(--text-muted);" onclick="changeStep(-1)"><i class="fas fa-arrow-left"></i> Back</button>
+                    <button style="width: 250px; background: rgba(255,255,255,0.3);" onclick="changeStep(1)">View Leaderboard <i class="fas fa-trophy" style="margin-left:8px;"></i></button>
+                </div>
+            </div>
+
+            <div class="step" id="step-7">
+                <div class="step-header">
+                    <h3>Global Leaderboard</h3>
+                    <p>Ranking your Current Carbon Footprint (KgCO₂).</p>
+                </div>
+
+                <div class="lb-container" id="leaderboard-list">
+                </div>
+
+                <div class="btn-row" style="justify-content: center;">
+                    <button style="width: 250px; background: rgba(255,255,255,0.3);" onclick="resetWizard()"><i class="fas fa-redo" style="margin-right:8px;"></i> Start New Analysis</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="social-modal" id="social-modal">
+        <div class="social-card-wrapper" id="social-card">
+            <div class="social-header"><i class="fas fa-paw"></i> EcoFootprint</div>
+            <div class="social-content">
+                <div class="social-content-title" id="social-title-val">Evaluating...</div>
+                <h3>Monthly<br>Footprint</h3>
+                <div class="social-score" id="social-score-val">0</div>
+                <div class="social-unit">Kg CO₂ Emitted</div>
+            </div>
+            <div class="social-glass-box">
+                <p><i class="fas fa-trophy" style="color: transparent; -webkit-text-stroke: 1px #fff; margin-right: 8px;"></i> <span id="social-user-name">I</span> currently ranked <span id="social-rank-val">#0</span> on the global leaderboard!</p>
+            </div>
+            <div class="social-footer">@EcoFootprintApp</div>
+        </div>
+
+        <div class="modal-controls">
+            <button style="flex:1; background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--glass-border);" onclick="closeSocialModal()">Cancel</button>
+            <button id="downloadCardBtn" style="flex:2; background: rgba(225, 48, 108, 0.8); color: white; border: 1px solid rgba(255,255,255,0.3);" onclick="downloadCardImage()"><i class="fas fa-download" style="margin-right: 8px;"></i> Download</button>
+        </div>
+    </div>
+
+<script>
+    // ==========================================
+    // 1. CONTINUOUS AUDIO ENGINE
+    // ==========================================
+    const currentTrack = new Audio('/static/Purity_Beautiful_Piano.mp3');
+    currentTrack.loop = true;
+    currentTrack.volume = 1.0;
+    
+    // CUSTOM SOUND: Heavy Emitter Alert
+    const heavyAlertSound = new Audio('/static/heavy_alert.mp3');
+    heavyAlertSound.loop = false;
+    heavyAlertSound.volume = 1.0;
+
+    // CUSTOM SOUND: Eco Champion Alert
+    const championSound = new Audio('/static/champion_alert.mp3');
+    championSound.loop = false;
+    championSound.volume = 1.0;
+
+    // CUSTOM SOUND: Average Emitter Alert (NEW)
+    const averageSound = new Audio('/static/average_alert.mp3');
+    averageSound.loop = false;
+    averageSound.volume = 1.0;
+
+    let isMuted = false;
+    let hasStarted = false;
+
+    // Function to handle play and UI update
+    function playAudio() {
+        currentTrack.play().then(() => {
+            hasStarted = true;
+            isMuted = false;
+            document.getElementById('audioIcon').className = 'fas fa-volume-up';
+        }).catch(() => {
+            // Autoplay blocked by browser until user interacts
+            isMuted = true;
+            document.getElementById('audioIcon').className = 'fas fa-volume-mute';
+        });
+    }
+
+    // Attempt to play on load
+    window.addEventListener('DOMContentLoaded', () => {
+        playAudio();
+    });
+
+    // Browsers block autoplay until the user interacts (clicks anywhere). 
+    // This ensures music starts on their very first click on the page 
+    document.body.addEventListener('click', () => {
+        if (!hasStarted) {
+            playAudio();
+        }
+    });
+
+    // Handle the clicking of the Mute/Unmute button manually
+    function toggleAudio() {
+        hasStarted = true; // Mark as started so the document click listener doesn't override
+        const icon = document.getElementById('audioIcon');
+        isMuted = !isMuted;
+        
+        if (isMuted) {
+            icon.className = 'fas fa-volume-mute';
+            currentTrack.pause();
+        } else {
+            icon.className = 'fas fa-volume-up';
+            currentTrack.play().catch(e => console.log(e));
+        }
+    }
+
+    // Triggered when user clicks "Hop In"
+    function handleLoginWrapper() {
+        handleLogin(); 
+    }
+
+    // ==========================================
+    // GLOBAL EFFECTS FUNCTIONS
+    // ==========================================
+    function blastConfetti() {
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+    }
+
+    function blastYellowConfetti() {
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#F2C94C', '#F2994A', '#ffeb3b', '#fbc02d', '#f57f17']
+        });
+    }
+
+    function blastSmoke() {
+        // Uses the confetti library to simulate a dark smoke/soot blast
+        confetti({
+            particleCount: 250,
+            spread: 120,
+            startVelocity: 50,
+            origin: { y: 0.7 },
+            colors: ['#1a1a1a', '#333333', '#4d4d4d', '#666666', '#000000'],
+            shapes: ['circle'],
+            gravity: 0.3,
+            scalar: 2,
+            ticks: 300
+        });
+    }
+
+    // ==========================================
+    // 2. STATE & ENVIRONMENT
+    // ==========================================
+    let currentStep = 1; const totalSteps = 7;
+    let globalData = null; let chartInstance = null; let currentUser = ""; let currentPass = "";
+    let mockLastTotal = localStorage.getItem('ecoCalcHistory') ? parseFloat(localStorage.getItem('ecoCalcHistory')) : 0;
+
+    const particleContainer = document.getElementById('particle-container');
+    const sceneryContainer = document.getElementById('scenery-container');
+    
+    function spawnEnvironment(theme) {
+        particleContainer.innerHTML = '';
+        sceneryContainer.innerHTML = '';
+
+        if (theme === 'saint') {
+            let rays = document.createElement('div'); rays.className = 'sun-ray'; sceneryContainer.appendChild(rays);
+            let hill1 = document.createElement('div'); hill1.className = 'rolling-hill hill-1';
+            let hill2 = document.createElement('div'); hill2.className = 'rolling-hill hill-2';
+            sceneryContainer.appendChild(hill1); sceneryContainer.appendChild(hill2);
+            
+            for(let i=0; i<25; i++) {
+                let f = document.createElement('div'); f.className = 'firefly';
+                f.style.left = Math.random() * 100 + 'vw'; f.style.top = Math.random() * 100 + 'vh';
+                f.style.animationDuration = (Math.random() * 3 + 2) + 's'; f.style.animationDelay = (Math.random() * 2) + 's';
+                particleContainer.appendChild(f);
+
+                let p = document.createElement('div'); p.className = 'particle-leaf';
+                let size = Math.random() * 20 + 15; p.style.width = size + 'px'; p.style.height = size + 'px';
+                p.style.left = Math.random() * 100 + 'vw'; p.style.animationDuration = (Math.random() * 8 + 5) + 's';
+                p.style.animationDelay = (Math.random() * 5) + 's'; particleContainer.appendChild(p);
+            }
+        } 
+        else if (theme === 'destroyer') {
+            let glow = document.createElement('div'); glow.className = 'toxic-glow'; sceneryContainer.appendChild(glow);
+            for(let i=0; i<5; i++) {
+                let smog = document.createElement('div'); smog.className = 'smog-cloud';
+                let size = Math.random() * 300 + 200; smog.style.width = size + 'px'; smog.style.height = size + 'px';
+                smog.style.left = (Math.random() * 120 - 10) + 'vw'; smog.style.top = (Math.random() * 80 - 10) + 'vh';
+                smog.style.animationDuration = (Math.random() * 20 + 15) + 's'; sceneryContainer.appendChild(smog);
+            }
+            for(let i=0; i<30; i++) {
+                let p = document.createElement('div'); p.className = 'particle-ember';
+                let size = Math.random() * 8 + 3; p.style.width = size + 'px'; p.style.height = size + 'px';
+                p.style.left = Math.random() * 100 + 'vw'; p.style.animationDuration = (Math.random() * 5 + 3) + 's';
+                p.style.animationDelay = (Math.random() * 3) + 's'; particleContainer.appendChild(p);
+            }
+        } 
+        else {
+            for(let i=0; i<6; i++) {
+                let cloud = document.createElement('div'); cloud.className = 'drifting-cloud';
+                let w = Math.random() * 300 + 150; cloud.style.width = w + 'px'; cloud.style.height = (w/2) + 'px';
+                cloud.style.top = (Math.random() * 60) + 'vh'; cloud.style.animationDuration = (Math.random() * 40 + 30) + 's';
+                cloud.style.animationDelay = '-' + (Math.random() * 20) + 's'; sceneryContainer.appendChild(cloud);
+            }
+            const colors = ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.15)'];
+            for(let i=0; i<20; i++) {
+                let p = document.createElement('div'); p.className = 'bubble';
+                let size = Math.random() * 50 + 20; p.style.width = size + 'px'; p.style.height = size + 'px';
+                p.style.background = colors[Math.floor(Math.random() * colors.length)]; p.style.left = Math.random() * 100 + 'vw';
+                p.style.animationDuration = (Math.random() * 15 + 10) + 's'; particleContainer.appendChild(p);
+            }
+        }
+    }
+
+    spawnEnvironment('default');
+
+    // ==========================================
+    // 3. MASCOT & SECURE LOGIN LOGIC
+    // ==========================================
+    const passwordInput = document.getElementById("password");
+    const footMascot = document.getElementById("foot-mascot");
+    const loginScreen = document.getElementById("loginScreen");
+
+    passwordInput.addEventListener('focus', () => footMascot.classList.add('eyes-closed'));
+    passwordInput.addEventListener('blur', () => footMascot.classList.remove('eyes-closed'));
+
+    document.addEventListener('mousemove', (e) => {
+        if(loginScreen.style.display === 'none' || footMascot.classList.contains('eyes-closed')) return;
+        const leftPupil = document.getElementById('pupil-left'); const rightPupil = document.getElementById('pupil-right');
+        function movePupil(pupilElement, cx, cy) {
+            const mascot = footMascot.getBoundingClientRect();
+            const scaleX = mascot.width / 200; const scaleY = mascot.height / 300; 
+            const eyeX = mascot.left + (cx * scaleX); const eyeY = mascot.top + (cy * scaleY);
+            const dx = e.clientX - eyeX; const dy = e.clientY - eyeY;
+            const angle = Math.atan2(dy, dx); const distance = Math.min(Math.hypot(dx, dy) / 100, 2);
+            pupilElement.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
+        }
+        movePupil(leftPupil, 85, 170); movePupil(rightPupil, 125, 170);
+    });
+
+    passwordInput.addEventListener("keypress", (e) => { if (e.key === "Enter") document.getElementById("loginBtn").click(); });
+
+    let isSignup = false;
+    function toggleSignup() {
+        isSignup = !isSignup;
+        document.getElementById('loginBtn').innerText = isSignup ? "Create Account" : "Hop In";
+        document.getElementById('toggleAuthBtn').innerText = isSignup ? "Log In instead" : "Create Account";
+        document.getElementById('authToggleText').innerText = isSignup ? "Already have an account? " : "New here? ";
+        document.getElementById('authTitle').innerText = isSignup ? "Join Us! 🌱" : "Hello there! 🐾";
+        document.getElementById('authSubtitle').innerText = isSignup ? "Start tracking your green journey." : "Let's check on your little footprint.";
+        document.getElementById('loginError').style.display = "none";
+    }
+
+    async function handleLogin() {
+        const errorBox = document.getElementById('loginError');
+        const userIn = document.getElementById('username'); const passIn = document.getElementById('password');
+        const username = userIn.value.trim(); const password = passIn.value.trim();
+        
+        if (!username || !password) { errorBox.innerText = "Please enter both details!"; errorBox.style.display = "block"; return; }
+
+        try {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await response.json();
+            
+            if(data.error) {
+                errorBox.innerText = data.error; errorBox.style.display = "block"; return;
+            }
+
+            const btn = document.getElementById('loginBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true; errorBox.style.display = "none";
+
+            setTimeout(() => {
+                currentUser = username; currentPass = password;
+                loginScreen.style.transform = "scale(0.95)"; loginScreen.style.opacity = "0";
+                setTimeout(() => {
+                    loginScreen.style.display = "none";
+                    const dashboard = document.getElementById('dashboardScreen');
+                    dashboard.style.display = "flex"; dashboard.style.opacity = "0";
+                    updateProgress(); void dashboard.offsetWidth; 
+                    dashboard.style.transition = "opacity 0.8s ease"; dashboard.style.opacity = "1";
+                }, 600); 
+                btn.innerHTML = isSignup ? "Create Account" : "Hop In"; btn.disabled = false;
+            }, 800);
+        } catch(err) {
+            errorBox.innerText = "Connection error. Is the server running?"; errorBox.style.display = "block";
+        }
+    }
+
+    // ==========================================
+    // 4. WORKSPACE & CALCULATIONS
+    // ==========================================
+    function loadLeaderboard() {
+        let stored = localStorage.getItem('ecoCalcLeaderboardFinalV7');
+        if (stored) return JSON.parse(stored);
+        return [];
+    }
+
+    function updateProgress() { document.getElementById('progressBar').style.width = ((currentStep / totalSteps) * 100) + '%'; }
+
+    function changeStep(direction) {
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        currentStep += direction; 
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        updateProgress();
+
+        if (currentStep === 5 && globalData) {
+            const saplingGroup = document.getElementById('sapling-group');
+            saplingGroup.style.transition = 'none'; saplingGroup.style.transform = 'scale(0)'; 
+            void saplingGroup.offsetWidth; 
+            setTimeout(() => {
+                saplingGroup.style.transition = 'transform 3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                let targetScale = 0;
+                if (globalData.title === "Heavy Emitter") targetScale = 0.35;
+                else if (globalData.title === "Average Emitter") targetScale = 0.65;
+                else targetScale = 1.0; 
+                saplingGroup.style.transform = `scale(${targetScale})`;
+            }, 300);
+        }
+        
+        if (currentStep === 6 && globalData) {
+            document.getElementById("habitSlider").value = 0; updateSliderProjection();
+        }
+    }
+    
+    function resetWizard() {
+        currentStep = 1; 
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active')); 
+        document.getElementById('step-1').classList.add('active'); 
+        updateProgress();
+    }
+
+    async function calculateFinal() {
+        const btn = document.getElementById('calcBtn'); 
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Analyzing...'; 
+        btn.disabled = true;
+
+        const payload = {
+            people: Number(document.getElementById('people').value) || 1,
+            diet_type: document.getElementById('diet_type').value,
+            meals_per_day: Number(document.getElementById('meals_per_day').value),
+            electricity_kwh: Number(document.getElementById('electricity_kwh').value),
+            lpg_kg: Number(document.getElementById('lpg_kg').value),
+            screen_hours: Number(document.getElementById('screen_hours').value),
+            data_gb: Number(document.getElementById('data_gb').value),
+            car_km: Number(document.getElementById('car_km').value),
+            bike_km: Number(document.getElementById('bike_km').value),
+            metro_km: Number(document.getElementById('metro_km').value),
+            bus_km: Number(document.getElementById('bus_km').value),
+            flight_km: Number(document.getElementById('flight_km').value)
+        };
+
+        try {
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            
+            if(data.error) {
+                alert("Calculation Error: " + data.error); btn.innerHTML = originalText; btn.disabled = false; return;
+            }
+
+            let total = data.total_emission;
+            let carbon_score = Math.max(0, Math.floor(100 - (total / 12)));
+            
+            let improvement_status = ""; let comparison_value = 0;
+            if (mockLastTotal > 0) {
+                comparison_value = ((mockLastTotal - total) / mockLastTotal) * 100;
+                improvement_status = comparison_value > 0 ? "Improved" : "Degrading";
+            } else { improvement_status = "First entry"; }
+            
+            mockLastTotal = total; localStorage.setItem('ecoCalcHistory', mockLastTotal);
+
+            let dbUsers = loadLeaderboard();
+            let existingUserIndex = dbUsers.findIndex(u => u.username === currentUser);
+            if (existingUserIndex !== -1) {
+                dbUsers[existingUserIndex].current_total = total;
+                dbUsers[existingUserIndex].score = carbon_score;
+            } else { dbUsers.push({ username: currentUser, current_total: total, score: carbon_score }); }
+            dbUsers.sort((a,b) => a.current_total - b.current_total);
+            localStorage.setItem('ecoCalcLeaderboardFinalV7', JSON.stringify(dbUsers)); 
+            let rank = dbUsers.findIndex(u => u.username === currentUser) + 1;
+
+            globalData = {
+                total_emission: total, carbon_score: carbon_score, title: data.title,
+                cars: data.cars.toFixed(1), twin: data.twin, trees_needed: data.trees_needed,
+                highest_category: "Overall Routine", improvement_status: improvement_status,
+                comparison_value: comparison_value, suggestions: ["Switch to LED bulbs", "Carpool or use public transit", "Include more plant-based meals"],
+                leaderboard: dbUsers, rank: rank
+            };
+            
+            document.getElementById('sliderResultText').innerHTML = `Current Footprint: <strong style="font-size: 1.2rem;">${globalData.total_emission.toFixed(1)} Kg CO₂e</strong>`;
+            
+            changeStep(1); renderResults();
+
+        } catch (err) {
+            alert("Connection to backend failed. Is the server running?"); console.error(err);
+        }
+
+        btn.innerHTML = originalText; btn.disabled = false;
+    }
+
+    function updateSliderProjection() {
+        if(!globalData) return;
+        let val = document.getElementById("habitSlider").value;
+        let resultBox = document.getElementById("sliderResultText");
+        
+        if (val == 0) { resultBox.innerHTML = `Current Footprint: <strong style="font-size: 1.2rem;">${globalData.total_emission.toFixed(1)} Kg CO₂e</strong>`; } 
+        else {
+            let reduction = val * 0.10; let newFootprint = globalData.total_emission * (1 - reduction);
+            resultBox.innerHTML = `After ${val} simple changes: <strong style="font-size: 1.4rem; color: var(--accent); text-shadow: 0 0 10px rgba(255,255,255,0.3);">${newFootprint.toFixed(1)} Kg 📉</strong>`;
+        }
+    }
+
+    function animateValue(id, endValue, isFloat = false) {
+        const obj = document.getElementById(id); let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / 1000, 1);
+            let val = ((1 - Math.pow(1 - progress, 4)) * endValue);
+            obj.innerHTML = isFloat ? val.toFixed(1) : Math.floor(val);
+            if (progress < 1) window.requestAnimationFrame(step); 
+            else obj.innerHTML = isFloat ? endValue.toFixed(1) : endValue; 
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    function renderResults() {
+        if(!globalData) return;
+        
+        document.body.className = ''; 
+        
+        const tierTitleEl = document.getElementById("tier-title-display");
+        tierTitleEl.className = "tier-title-highlight"; 
+        
+        if (globalData.title === "Eco Champion") {
+            document.body.classList.add('theme-saint'); 
+            spawnEnvironment('saint');
+            tierTitleEl.classList.add("color-saint");
+            
+            // Add Confetti text and clickable emoji
+            tierTitleEl.innerHTML = globalData.title + ' <span onclick="blastConfetti()" style="cursor: pointer; display: inline-block; transition: transform 0.2s;" onmouseover="this.style.transform=\'scale(1.2)\'" onmouseout="this.style.transform=\'scale(1)\'" title="Tap to celebrate!">🎉</span>';
+            
+            // Trigger confetti
+            blastConfetti();
+            
+            // AUTOMATICALLY PLAY THE CUSTOM CHAMPION ALERT SOUND
+            championSound.play().catch(e => console.log("Champion audio blocked by browser:", e));
+            
+        } else if (globalData.title === "Average Emitter") {
+            // AVERAGE EMITTER LOGIC
+            document.body.classList.add('theme-mid'); 
+            spawnEnvironment('default');
+            tierTitleEl.classList.add("color-mid");
+            
+            // Add Confetti text and clickable emoji for Average
+            tierTitleEl.innerHTML = globalData.title + ' <span onclick="blastYellowConfetti()" style="cursor: pointer; display: inline-block; transition: transform 0.2s;" onmouseover="this.style.transform=\'scale(1.2)\'" onmouseout="this.style.transform=\'scale(1)\'" title="Tap to celebrate!">✨</span>';
+            
+            // Trigger yellow confetti automatically
+            blastYellowConfetti();
+
+            // AUTOMATICALLY PLAY THE CUSTOM AVERAGE ALERT SOUND
+            averageSound.play().catch(e => console.log("Average audio blocked by browser:", e));
+            
+        } else {
+            // HEAVY EMITTER LOGIC
+            document.body.classList.add('theme-destroyer'); 
+            spawnEnvironment('destroyer');
+            tierTitleEl.classList.add("color-heavy");
+            
+            // Add Smoke text and clickable emoji
+            tierTitleEl.innerHTML = globalData.title + ' <span onclick="blastSmoke()" style="cursor: pointer; display: inline-block; transition: transform 0.2s;" onmouseover="this.style.transform=\'scale(1.2)\'" onmouseout="this.style.transform=\'scale(1)\'" title="Tap to release smog!">💨</span>';
+            
+            // Trigger smoke blast
+            blastSmoke();
+            
+            // AUTOMATICALLY PLAY THE CUSTOM HEAVY ALERT SOUND
+            heavyAlertSound.play().catch(e => console.log("Heavy alert audio blocked by browser:", e));
+        }
+
+        // STAT CARDS
+        animateValue("res_total", globalData.total_emission, true);
+        animateValue("res_score", globalData.carbon_score, false);
+        animateValue("res_trees", globalData.trees_needed, false);
+        
+        document.getElementById("car_equiv").innerText = globalData.cars;
+        document.getElementById("twin_country").innerText = globalData.twin;
+        
+        let impObj = document.getElementById("res_improvement"); let compObj = document.getElementById("res_comp_val");
+        if(globalData.improvement_status === "First entry") { impObj.innerText = "New"; compObj.innerText = "First Entry"; } 
+        else if (globalData.improvement_status === "Improved") { impObj.innerText = "Improving"; compObj.innerText = `Reduced by ${globalData.comparison_value.toFixed(1)}%`; } 
+        else { impObj.innerText = "Degrading"; compObj.innerText = `Increased by ${Math.abs(globalData.comparison_value).toFixed(1)}%`; }
+
+        const textColor = '#ffffff';
+        if(chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(document.getElementById('benchmarkChart').getContext('2d'), {
+            type: 'bar',
+            data: { 
+                labels: ['Your Footprint', 'Target Goal', 'India Avg'], 
+                datasets: [{ 
+                    data: [globalData.total_emission, 150, 240], 
+                    backgroundColor: ['#1b5e20', '#4caf50', '#81c784'], borderRadius: 12 
+                }] 
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+                scales: { 
+                    x: { ticks: { color: textColor, font: { family: 'Nunito', weight: '800' } }, grid: { display: false }, border:{display:false} }, 
+                    y: { beginAtZero: true, ticks: { color: textColor, font: { family: 'Nunito', weight: '800' } }, border: { dash: [6, 6], display: false }, grid: { color: 'rgba(255,255,255,0.2)' } } 
+                } 
+            }
+        });
+
+        const saplingMsg = document.getElementById('sapling-message');
+        if (globalData.title === "Eco Champion") { saplingMsg.innerHTML = `You are an <span class="impact-highlight">Eco Champion!</span> Your tree fully thrives.`; } 
+        else if (globalData.title === "Average Emitter") { saplingMsg.innerHTML = `You are an <span class="impact-highlight">Average Emitter.</span> It grew into a plant, but needs more help to become a tree.`; } 
+        else { saplingMsg.innerHTML = `Oh no, <span class="impact-highlight">Heavy Emitter!</span> Your high emissions keep it as a struggling sapling.`; }
+
+        document.getElementById("highest-cat-label").innerText = globalData.highest_category;
+        const suggestionBox = document.getElementById("dynamic-suggestions");
+        suggestionBox.innerHTML = "";
+        
+        const icons = ['fa-leaf', 'fa-lightbulb', 'fa-recycle'];
+        globalData.suggestions.forEach((sug, i) => {
+            let icon = icons[i % icons.length];
+            suggestionBox.innerHTML += `
+                <div class="action-card">
+                    <div style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); width: 60px; height: 60px; border-radius: 16px; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: var(--text-main); flex-shrink: 0; backdrop-filter: blur(5px);">
+                        <i class="fas ${icon}"></i>
+                    </div>
+                    <div><h4>Suggestion ${i+1}</h4><p>${sug}</p></div>
+                </div>
+            `;
+        });
+
+        const lbContainer = document.getElementById("leaderboard-list");
+        lbContainer.innerHTML = "";
+        globalData.leaderboard.forEach((user, index) => {
+            let isMe = user.username === currentUser;
+            let icon = "";
+            if (index === 0) icon = '<span style="font-size: 1.5rem;">🥇</span>';
+            else if (index === 1) icon = '<span style="font-size: 1.5rem;">🥈</span>';
+            else if (index === 2) icon = '<span style="font-size: 1.5rem;">🥉</span>';
+            else icon = `#${index+1}`;
+            
+            lbContainer.innerHTML += `
+                <div class="lb-row ${isMe ? 'current-user' : ''}">
+                    <div class="lb-rank">${icon}</div>
+                    <div class="lb-name">${user.username} ${isMe ? '<span style="font-size: 0.8rem; opacity: 0.8;">(You)</span>' : ''}</div>
+                    <div class="lb-score">${user.score}/100<br><span style="font-size: 0.8rem; color: var(--text-muted);">${user.current_total.toFixed(1)} Kg</span></div>
+                </div>
+            `;
+        });
+    }
+
+    function openSocialModal() {
+        if(!globalData) return;
+        document.getElementById('social-score-val').innerText = globalData.total_emission.toFixed(1);
+        document.getElementById('social-rank-val').innerText = "#" + globalData.rank;
+        document.getElementById('social-title-val').innerText = globalData.title;
+        document.getElementById('social-user-name').innerText = currentUser + " is"; 
+        
+        const flashcard = document.getElementById('social-card');
+        if (globalData.title === "Eco Champion") { flashcard.style.background = "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)"; } 
+        else if (globalData.title === "Average Emitter") { flashcard.style.background = "linear-gradient(135deg, #F2994A 0%, #F2C94C 100%)"; } 
+        else { flashcard.style.background = "linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%)"; }
+
+        const modal = document.getElementById('social-modal');
+        modal.style.display = 'flex'; setTimeout(() => modal.style.opacity = '1', 10);
+    }
+
+    function closeSocialModal() {
+        const modal = document.getElementById('social-modal');
+        modal.style.opacity = '0'; setTimeout(() => modal.style.display = 'none', 400);
+    }
+
+    function downloadCardImage() {
+        const card = document.getElementById('social-card');
+        const btn = document.getElementById('downloadCardBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Creating...'; btn.disabled = true;
+
+        const oldFilter = card.style.backdropFilter; const oldBorder = card.style.border;
+        card.style.backdropFilter = "none"; card.style.border = "none";
+        
+        if (globalData.title === "Eco Champion") { card.style.backgroundImage = "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)"; card.style.backgroundColor = "#38ef7d"; } 
+        else if (globalData.title === "Average Emitter") { card.style.backgroundImage = "linear-gradient(135deg, #F2994A 0%, #F2C94C 100%)"; card.style.backgroundColor = "#F2C94C"; } 
+        else { card.style.backgroundImage = "linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%)"; card.style.backgroundColor = "#ef473a"; }
+
+        html2canvas(card, { scale: 3, useCORS: true, backgroundColor: null }).then(canvas => {
+            let link = document.createElement('a'); link.download = `EcoFootprint_${currentUser}.png`; link.href = canvas.toDataURL('image/png'); link.click();
+            card.style.backdropFilter = oldFilter; card.style.border = oldBorder;
+            btn.innerHTML = '<i class="fas fa-check" style="margin-right:8px;"></i> Saved!';
+            setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+        });
+    }
+</script>
+</body>
+</html>
